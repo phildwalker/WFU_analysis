@@ -332,7 +332,7 @@ Chi-square would indicate that the survey response does not match the proportion
 
 
 ## Non-response weights
-By comparing the sample proportions to the population within the factbooks via a Chi-Square test we find that the __sample does not align with the _population.__ 
+By comparing the sample proportions to the population within the factbooks via a Chi-Square test we find that the __sample does not align with the population.__ 
 
 This misalignment is likely due to _non-response_ and from calculating the non-response weight (NonRep_wt) we see that:  
 
@@ -512,28 +512,32 @@ Based on the descriptive statistics review of the variables, the missing data fo
 ## Develop Model for Major
 The goal of the model is to be able to predict a binary outcome that is categorical (is the student likely to choose STEM or not as their major). These types of models are generally called "classification models" and two commonly used ones are Logistic regessions and random forests.
 
+***
 
-### LOGISTIC REGRESSION
-In this algorithm, the probabilities describing the possible outcomes of a single trial are modelled using a logistic function.
-		this is a sub model of "glm" which like linear regression aims to find the line which reduces residuals
+### Logisitic Regression
+In this algorithm, the probabilities describing the possible outcomes of a single trial are modelled using a regession line which is then transformed via log. This algorithm is a part of the generalized linear model (glm) family, of which linear regession is a part.
 
-Advantages: Logistic regression is designed for classification, and is most useful for understanding the influence of several independent variables on a single outcome variable.
+Advantages: Logistic regression was designed for classification, and is very useful for understanding the influence of several independent variables on a single outcome variable.
 
 Disadvantages: Works only when the predicted variable is binary, assumes all predictors are independent of each other, and assumes data is free of missing values.
 
-### RANDOM FOREST
+***
+
+### Random Forest
 Random forest classifier fits a number of decision trees on various sub-samples of datasets and uses average to improve the predictive accuracy of the model and control over-fitting.
 
 Advantages: Reduction in over-fitting and random forest classifier is more accurate than decision trees in most cases.
 
 Disadvantages: Slow real time prediction, difficult to implement, and complex algorithm.
 
+***
 
 ### Model Overview
 
 <u>Training and Test data</u>
 
-Splitting data into training and test datasets
+We developing models, often we will split the data into "training" and "test" datasets. This allows to have a dataset which was not used for the creation be used when we test our model accuracy.  
+In the case of this model we have utilized a 75/25 (training/test) split.
 	
 <u>Model Performance</u>
 
@@ -541,6 +545,9 @@ Splitting data into training and test datasets
 *  Precision: "how sensitive models are to False Positives" (i.e. predicting a student will not choose STEM is leaving when he-she actually chooses STEM)  
 *  Recall: "how sensitive models are to False Negatives" (i.e. predicting that a student will choose STEM he-she will not choose STEM).
 
+All of these outputs can be calculated using a _confusion matrix_ which visually allows us to see how many students are correctly assigned (true positive and true negative) vs how many aren't when we use our model with the test dataset.
+
+***
 
 ```{r model prep}
 
@@ -791,25 +798,33 @@ So that are the student characteristics that make them more likely to choose STE
     - white or asian
     - have a fairly high college gpa
 *  On a student characteristic standpoint they are more likely to:  
-    - believe themselves to be part of a scientific community
+    - believe themselves to be part of a scientific community (AGREE_01)
+    - feel like they belong in the field of science (AGREE_03)
+    - want to make theoretical contributions to scientific fields (AGREE_08)
+    - think of themselves as a scientist (AGREE_02)
 
 
 <u>If we want to optimize the current model</u>
-*  Did not investigate the characterize the students who were admitted but did not enroll, which could be an opportunity to quickly increase the STEM enrollment
 
+1.  Would probably want to recruit from scientific communities.  
+2.  With marketing, could highlight Wake's strong STEM majors in communities known to be more predominately white/asain
 
 
 <u>If we want to correct for reasons why predictive elements</u>
 
+1.  Start to interview female students or students from other ethnicities to explore more about why they didn't choose STEM.  
+2.  Investigate why developing a life philosophy (AGREE_06) or being a community leader (AGREE_07) isn't important to students when choosing STEM. This could be more of how STEM is culturally understoon.
 
 
 <u>Research Items</u>
-*  Seeing that "College GPA" has a fairly large impact in the model, a next step in this investigation would be to see if the types of classes that students took impacted their GPA.
+
+1.  Seeing that "College GPA" has a fairly large impact in the model, a next step in this investigation would be to see if the types of classes that students took impacted their GPA.
+2.  Leading vs lagging predictors: ie not sure if students chose STEM because they had a community or because they joined STEM they felt like they had a STEM community.
 
 ## Limitations
 *  Did not review the students who changed their major later in their academic career, which could be used a test cases for how to transition the current population into STEM
 *  Data doesn't show which students graduate within STEM. THis would help to understand if the support structure could be improved for those majors.
 *  Assuming that the count of students from the fact book are representative of students from the survery (start of year vs 2nd semester)
 *  Survey response distribution does not match with the student population 
+*  Did not investigate the characterize the students who were admitted but did not enroll, which could be an opportunity to quickly increase the STEM enrollment
 
-Leading vs lagging predictors
