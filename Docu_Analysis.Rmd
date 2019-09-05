@@ -57,11 +57,11 @@ recipe_simple <- function(dataset) {
 # Introduction {.tabset .tabset-pills}
 
 ### Goal 
-We are looking to understand the relationships between what major students choose and that student's self-perception in additional to their demographic characteristics (which could potentially serve an latent variables for cultural percentions).
+We are looking to understand the relationship between what major a students chooses and that student's self assessment of the activities they engagement in, their values, and their perceived competencies in additional to their demographic characteristics (which could potentially serve an latent variables for cultural norms around STEM desirability).
 
 ***
 
-__Per the prompt:__
+<u>Per the prompt:</u>
 
 <style>
 div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
@@ -77,8 +77,8 @@ div.blue { background-color:#e6f0ff; border-radius: 5px; padding: 10px;}
 
 ### Assumptions Made
 
-*  That the surveys are based on ‘probability sample’. These are surveys where all units in our statistical population have a chance of being selected and the probability of selection is known to the researcher. 
-*  That all students have the sample probability of being sampled because it is likely that this survey went out to all students
+*  That the surveys are based on ‘probability sample’. (ie surveys where all studnets in our population have a chance of being selected and the probability of selection is known).
+    - Believe this to a safe assumption because this survey went out to all students.
 *  That the survey questions had already been validated to be used for this population. (ie the scales have been validated)
 
 ***
@@ -106,7 +106,10 @@ If we can predict the major of the students and understand the driving factors t
 # EDA {.tabset .tabset-pills}
 
 ## Data Overview  
+### Data Source  
+
 Our data for this analysis came from two differnt sources:  
+
 1.  The surevy results provided by the IR team.  
     - Students of the 2012, 2013, 2014, and 2015 freshman cohorts were surveyed during their second semester of their first year.  
 2.  The factbooks for the corresponding years 
@@ -117,12 +120,19 @@ _Note: the factbooks were compiled from the Wake Forest Office of Institutional 
 ![FigName](images/WFU_OIR.PNG)
 </center>
 
+***
+<u>Sample of the data that was extracted from the factbooks:</u>
+
+<center>
+![FigName](images/WFU_exFactBook.PNG)
+</center>
+
 
 ### Data imported and additional factors created  
 
-*  For this dataset I decided to transform the scales of the questions to categorical data because I did not want to assume later on a consistent and proportional increase in value across the scale.  
-*  In the review of the Race/Ethnicity distribution both witin the fact book as well as the survey response data, I found that ~90% of all students reported their ethnicty to be either White, Asian, or Hispanic/LatinX. Therefore I collapsed the remaining ethnicities within an "Other" group.
-*  I also decided to create a new variable called STEM, which output a YES/NO if the major for the student fell within the STEM category. This is benefitial when developing the initial model which seeks to provide a prediction of the student's major being either STEM or non-STEM
+*  For this dataset I decided to transform the _scales of the survey questionaire_ to categorical data because I did not want to assume later on a consistent and proportional increase in value across the scale.  
+*  In the review of the _Race/Ethnicity_ distribution both witin the fact book as well as the survey response data, I found that ~90% of all students reported their ethnicty to be either White, Asian, or Hispanic/LatinX. Therefore I collapsed the remaining ethnicities within an "Other" group.
+*  I also decided to create a new variable called _STEM_, which output a YES/NO if the major for the student fell within the STEM category. This is benefitial when developing the initial model which seeks to provide a prediction of the student's major being either STEM or non-STEM.
 
 ```{r load the data}
 # Load data
@@ -130,57 +140,37 @@ suppressWarnings(suppressMessages(
 WFU_stu <- readr::read_csv("./Data/data_for_interviewees.csv") %>% 
   mutate_if(is.numeric,as.factor) %>%
   mutate(GENDER = trimws(toupper(GENDER)),
-         COLLEGE_GPA = as.numeric(COLLEGE_GPA),
-         COLLEGE_GPA = case_when(COLLEGE_GPA == 1 ~ 1,
-                                 COLLEGE_GPA == 2 ~ 2,
-                                 COLLEGE_GPA == 3 ~ 2.33,
-                                 COLLEGE_GPA == 4 ~ 2.67,
-                                 COLLEGE_GPA == 5 ~ 3.0,
-                                 COLLEGE_GPA == 6 ~ 3.33,
-                                 COLLEGE_GPA == 7 ~ 3.67,
-                                 COLLEGE_GPA == 8 ~ 4,
-                                 TRUE ~ 0),
-         HS_GPA = as.numeric(HS_GPA),
-         HS_GPA = case_when(HS_GPA == 1 ~ 1,
-                            HS_GPA == 2 ~ 2,
-                            HS_GPA == 3 ~ 2.33,
-                            HS_GPA == 4 ~ 2.67,
-                            HS_GPA == 5 ~ 3.0,
-                            HS_GPA == 6 ~ 3.33, 
-                            HS_GPA == 7 ~ 3.67,
-                            HS_GPA == 8 ~ 4,
-                            TRUE ~ 0),
-         DISTANCE = as.numeric(DISTANCE),
-         DISTANCEval = case_when(DISTANCE == 1 ~ 5,
-                                 DISTANCE == 2 ~ 10,
-                                 DISTANCE == 3 ~ 50,
-                                 DISTANCE == 4 ~ 100,
-                                 DISTANCE == 5 ~ 500,
-                                 DISTANCE == 6 ~ 1000,
-                                 TRUE ~ 0),
-         STEM = case_when(MAJOR == 6 ~"YES", TRUE ~ "NO"),
-         STEM = as.factor(STEM)) %>%
-  mutate(COLLEGE_GPA = ifelse(COLLEGE_GPA == 0, NA, COLLEGE_GPA),
-         HS_GPA = ifelse(HS_GPA == 0, NA, HS_GPA),
-         DISTANCEval = ifelse(DISTANCEval == 0, NA, DISTANCEval)) %>%
-  ungroup()
-))
-# xtabs(~RACETHN + GENDER, data=WFU_stu)
-
-WFU_stu <- 
-  WFU_stu %>% mutate(RACEgroup = fct_collapse(RACETHN, "Other" = c("1", "3", "5", "7"),
+         STEM = case_when(MAJOR == 6 ~"YES-STEM", TRUE ~ "NO-STEM"),
+         STEM = as.factor(STEM),
+         FIRST_GEN = fct_collapse(FIRST_GEN, "YES" = c("2"), "NO" = c("1"))) %>%
+  mutate(RACEgroup = fct_collapse(RACETHN, "Other" = c("1", "3", "5", "7"),
                                               "Asian" = c("2"),
                                               "LatinX" = c("4"),
-                                              "White" = c("6"))) 
-
-
-
-# xtabs(~RACEgroup, data=WFU_stu)
-
-# > colnames(WFU_stu)
-#  [1] "STUID"       "YEAR"        "GENDER"      "RACETHN"     "MAJOR"       "DISTANCE"    "HS_GPA"      "COLLEGE_GPA" "FIRST_GEN"   "ACT01"       "ACT02"       "ACT03"       "ACT04"       "ACT05"  
-# [15] "ACT06"       "ACT07"       "ACT08"       "ACT09"       "ACT10"       "ACT11"       "ACT12"       "ACT13"       "RATE1"       "RATE2"       "RATE3"       "RATE4"       "RATE5"       "RATE6"  
-# [29] "RATE7"       "AGREE_01"    "AGREE_02"    "AGREE_03"    "AGREE_04"    "AGREE_05"    "AGREE_06"    "AGREE_07"    "AGREE_08"    "AGREE_09"   
+                                              "White" = c("6"))) %>% 
+  mutate(COLLEGE_GPA = fct_collapse(COLLEGE_GPA, "D or lower" = c("1"),
+                                    "C" = c("2"),
+                                    "C+" = c("3"),
+                                    "B-" = c("4"),
+                                    "B" = c("5"),
+                                    "B+" = c("6"),
+                                    "A-" = c("7"),
+                                    "A or A+" = c("8"))) %>%  
+  mutate(HS_GPA = fct_collapse(HS_GPA, "D or lower" = c("1"),
+                                    "C" = c("2"),
+                                    "C+" = c("3"),
+                                    "B-" = c("4"),
+                                    "B" = c("5"),
+                                    "B+" = c("6"),
+                                    "A-" = c("7"),
+                                    "A or A+" = c("8"))) %>% 
+  mutate(DISTANCE = fct_collapse(DISTANCE, "5 or less" = c("1"),
+                                    "6 - 10" = c("2"),
+                                    "11 - 50" = c("3"),
+                                    "51 - 100" = c("4"),
+                                    "101 - 500" = c("5"),
+                                    "Over 500" = c("6"))) %>%
+  ungroup()
+))
 
 
 EthLook <- readxl::read_excel("./Data/DataFromFactBooks.xlsx", sheet = "LookUp")
@@ -211,12 +201,10 @@ WFU_stu %>% group_by(YEAR) %>% summarise(CountStu_response = n()) %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 ))
 
-# FB %>% group_by(RACEgroup, Gender) %>% summarise(stuCnt = sum(StuCount)) %>% spread(Gender, value=stuCnt)
 
 ```
 
-Asking questions along the way in our investigation:  
-*  What happened within 2014 where the respose rate was substantially lower than the other years
+_Note for future study: What happened within 2014 where the respose rate was substantially lower than the other years?_
 
 ### Overview of the provided dataset
 
@@ -232,17 +220,10 @@ visdat::vis_miss(WFU_stu) + coord_flip() + theme_bw()
 ## Demographic Comparison
 __Compare survey response to student population using WFU fact book__  
 
-Goal is to see if the students who responded are a representative sample of the student body.
+The first we want look at is whether or not the survey respondents are in line with the student population during the same period of time.
 
-The total student population has __X%__ for their gender, the respondents are __y%__.  
+Decided to use a Chi-square test of independence, which is commonly used for comparing categorical data. In our case we are testing if the proportion matches (which we would call our null hypothesis). If the p-value of the chi-square test is very small than we would reject the null hypothesis and say that our two populations are different.
 
-
-Potentaially could use a "rank-sum test"
-
-chi.square vs an anova for this analysis
-
-
-Decided to use a Chi-square test to understand if distribution of the students who responded to the survey matches the student population as reflected within the WFU fact book for that year.
 
 ### Chi-Square: Gender + Race/Ethnicity
 
@@ -265,6 +246,7 @@ ComparSamp <- left_join(TotalPop, WFU_Resp,
   mutate(NonRep_wt = Pop_Perc/Samp_Perc)
 
 ComparSamp %>%
+  round_df(2) %>% 
   kable(align='c') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
@@ -278,7 +260,7 @@ chisq.test(ComparSamp$CountStu_Samp, p = ComparSamp$Pop_Perc)
 GEN_ETH_wt <- ComparSamp %>% select(Gender, RACEgroup, NonRep_wt)
 
 ```
-Here, as with the two tests below, we find that the sample does not fully represent the student population.
+Here, as with the two tests below, we find that the sample response rate does not represent the student population.
 
 ### Chi-Square: Gender
 
@@ -301,7 +283,8 @@ ComparSamp <- left_join(TotalPop, WFU_Resp,
   mutate_if(is.numeric, replace_na, 0) %>% 
   mutate(NonRep_wt = Pop_Perc/Samp_Perc)
 
-ComparSamp %>% 
+ComparSamp %>%
+  round_df(2) %>% 
   kable(align='c') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
@@ -334,7 +317,8 @@ ComparSamp <- left_join(TotalPop, WFU_Resp,
   mutate_if(is.numeric, replace_na, 0) %>%
   mutate(NonRep_wt = Pop_Perc/Samp_Perc)
 
-ComparSamp %>% 
+ComparSamp %>%
+  round_df(2) %>%
   kable(align='c') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
@@ -350,9 +334,10 @@ Chi-square would indicate that the survey response does not match the proportion
 ## Non-response weights
 By comparing the sample proportions to the population within the factbooks via a Chi-Square test we find that the __sample does not align with the _population.__ 
 
-This misalignment is due to non-response, and from calculating the non-response weight (NonRep_wt) we see that:  
--  Males for every ethnicity except for Asian responsed at a lower rate than the population (weight is >1)  
--  For all females we see that their response rate was higher than that of the population (weight is <1)
+This misalignment is likely due to _non-response_ and from calculating the non-response weight (NonRep_wt) we see that:  
+
+-  Males for every ethnicity except for Asians responsed at a lower rate than the population (weight is >1)  
+-  For all females that their response rate was higher than that of the population (weight is <1)
 
 We will use these weights when reviewing our descriptive stats.
 
@@ -372,28 +357,44 @@ GEN_ETH_wt %>%
 
 Below is an comparison of the count of students who fall within each category.
 
-When we consider the responses to the serveys, we are assuming that the scales have been validated and the questions have been written to produce the least amount of bias.
-
 ### Compare response rates
 
 __Demographic overview__
 
 
-```{r comparing STEM vs Rest, fig.height = 10, fig.width = 12, fig.align = "center"}
-WFU_stu %>% 
-  select(1:9) %>% mutate(STEM = case_when(MAJOR == 6 ~ "STEM", TRUE ~ "NonSTEM")) %>%
-  select(-MAJOR) %>% 
-  gather(-STUID, -YEAR, -GENDER, -STEM, key = "var", value = "Resp") %>%
-  ggplot(aes(group = GENDER, x = Resp)) +
-    geom_bar(aes(y = ..prop.., fill = GENDER), stat="count") +
-    geom_text(aes(label = scales::percent(..prop..),
-                   y= ..prop.. ), stat= "count", vjust = -.5, size=3) +
+```{r comparing STEM vs Rest, fig.height = 4, fig.width = 10, fig.align = "center"}
+
+plotDEMO <- function(col_name, TitleNM){
+  col_name <- enquo(col_name)
+
+  WFU_stu %>% 
+    # select(2:9, STEM, RACEgroup) %>% 
+  left_join(., GEN_ETH_wt, by = c("GENDER" = "Gender", "RACEgroup" = "RACEgroup")) %>% 
+  group_by(STEM, !!col_name) %>% 
+  summarise(WeightedResp = sum(NonRep_wt, na.rm = TRUE)) %>% 
+  ungroup() %>% 
+  group_by(STEM) %>% 
+  mutate(TotalRes = sum(WeightedResp),
+         Percent = WeightedResp/TotalRes) %>% 
+  ggplot(aes(x=!!col_name, y=Percent))+
+    geom_bar(stat = "identity", aes(fill=!!col_name))+
+    geom_text(aes(label = scales::percent(Percent),
+                   y= Percent ), stat= "identity", vjust = -.5) + #, size=3
     theme_bw()+
     scale_fill_viridis(discrete=TRUE) +
-    facet_grid(var ~ STEM+GENDER) +
+    facet_grid( ~ STEM) +
     scale_y_continuous(labels = scales::percent_format(accuracy = 1), breaks=seq(0, 1, by=0.2)) + 
-    expand_limits(y=c(0,1))
+    expand_limits(y=c(0,1)) + 
+    ggtitle(paste0(TitleNM, " percentage by STEM group [Adjusted for non-response]"))
+  }
 
+plotDEMO(GENDER, "Gender")    
+plotDEMO(RACEgroup, "Aggregated Ethnicity")    
+plotDEMO(YEAR, "Student Cohort")    
+plotDEMO(FIRST_GEN, "First Generation") 
+suppressWarnings(suppressMessages(plotDEMO(DISTANCE, "Distance from Home")))
+suppressWarnings(suppressMessages(plotDEMO(HS_GPA, "HS GPA"))) 
+plotDEMO(COLLEGE_GPA, "College GPA")
 
 
 
@@ -401,75 +402,107 @@ WFU_stu %>%
 
 
 **Responses to ACT Questions**
-These questions asked students about the frequency at which they performed certain activities in the past year. 
+These questions asked students about the frequency at which they performed certain activities in the past year. The questions spanned questions about their activity outside of the classroom environment to inside the classroom. 
 
-These 
-
-__Scale__  
-
+<u>Scale</u>  
 1: Not at all  
 2: Occasionally  
 3: Frequently  
 
-```{r comparing STEM vs Rest ACT, fig.height = 10, fig.width = 12, fig.align = "center"}
-WFU_stu %>% 
-  mutate(STEM = case_when(MAJOR == 6 ~ "STEM", TRUE ~ "NonSTEM")) %>%
-  select(STUID, YEAR, GENDER, STEM, contains("ACT")) %>% 
-  gather(-STUID, -YEAR, -GENDER, -STEM, key = "var", value = "Resp") %>%
-  ggplot(aes(group = GENDER, x = Resp)) +
-    geom_bar(aes(y = ..prop.., fill = GENDER), stat="count") +
-    geom_text(aes(label = scales::percent(..prop..),
-                   y= ..prop.. ), stat= "count", vjust = -.5) +
-    theme_bw()+
-    scale_fill_viridis(discrete=TRUE) +
-    facet_grid(var ~ STEM+GENDER) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1))+ 
-    expand_limits(y=c(0,1))
+Based on my personal bias (as a former STEM undergrad) I would expect the questions that would be most likley to be positively associated with STEM selection are:  
+
+ACT09: _Look up scientific research articles and resources_   
+ACT13: _Write computer code_
+
+
+
+```{r comparing STEM vs Rest ACT, fig.height = 2, fig.width = 12, fig.align = "center"}
+
+plotDEMO(ACT01, "ACT01") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT02, "ACT02") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT03, "ACT03") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT04, "ACT04") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT05, "ACT05") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT06, "ACT06") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT07, "ACT07") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT08, "ACT08") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT09, "ACT09") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT10, "ACT10") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT11, "ACT11") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT12, "ACT12") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(ACT13, "ACT13") + xlab("Score") + theme(legend.position = "none")
+
 
 ```
 
 __Responses to RATE Questions__
 
-```{r comparing STEM vs Rest RATE, fig.height = 10, fig.width = 12, fig.align = "center"}
-WFU_stu %>% 
-  mutate(STEM = case_when(MAJOR == 6 ~ "STEM", TRUE ~ "NonSTEM")) %>%
-  select(STUID, YEAR, GENDER, STEM, contains("RATE")) %>% 
-  gather(-STUID, -YEAR, -GENDER, -STEM, key = "var", value = "Resp") %>%
-  ggplot(aes(group = GENDER, x = Resp)) +
-    geom_bar(aes(y = ..prop.., fill = GENDER), stat="count") +
-    geom_text(aes(label = scales::percent(..prop..),
-                   y= ..prop.. ), stat= "count", vjust = -.5, size=3) +
-    theme_bw()+
-    scale_fill_viridis(discrete=TRUE) +
-    facet_grid(var ~ STEM+GENDER) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1))+ 
-    expand_limits(y=c(0,1))
+These questions asked students about their perception of competence in a few areas. This group of questions fell into 2 general categories. 1) Student perception of interpersonal interactions and 2) student perception of their own academic related compentencies (like mathematical or writing abilities)
+
+<u>Scale</u>  
+1: A major weakness  
+2: somewhat weak  
+3: Average  
+4: Somewhat strong  
+5: A major strength  
+
+Based on my personal bias, I would expect the questions that would be most likley to be positively associated with STEM selection are:  
+
+RATE6: _Mathematical ability_  
+
+I would also expect the sterotype of poor writing ability (RATE7) to potentially result in a negative association to STEM.
+
+```{r comparing STEM vs Rest RATE, fig.height = 2, fig.width = 12, fig.align = "center"}
+
+plotDEMO(RATE1, "RATE1") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE2, "RATE2") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE3, "RATE3") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE4, "RATE4") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE5, "RATE5") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE6, "RATE6") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(RATE7, "RATE7") + xlab("Score") + theme(legend.position = "none")
+
+
 
 ```
 
 __Responses to AGREE Questions__
 
-```{r comparing STEM vs Rest AGREE, fig.height = 10, fig.width = 12, fig.align = "center"}
-WFU_stu %>% 
-  mutate(STEM = case_when(MAJOR == 6 ~ "STEM", TRUE ~ "NonSTEM")) %>%
-  select(STUID, YEAR, GENDER, STEM, contains("AGREE")) %>% 
-  gather(-STUID, -YEAR, -GENDER, -STEM, key = "var", value = "Resp") %>%
-  ggplot(aes(group = GENDER, x = Resp)) +
-    geom_bar(aes(y = ..prop.., fill = GENDER), stat="count") +
-    geom_text(aes(label = scales::percent(..prop..),
-                   y= ..prop.. ), stat= "count", vjust = -.5, size=3) +
-    theme_bw()+
-    scale_fill_viridis(discrete=TRUE) +
-    facet_grid(var ~ STEM+GENDER) +
-    scale_y_continuous(labels = scales::percent_format(accuracy = 1), limits = c(0, 1))+ 
-    expand_limits(y=c(0,1))
+These questions asked students about how they would assess the value of certain future goals or their perception of what community they belong to.   
+
+<u>Scale</u>  
+1: Strongly disagree  
+2: Disagree  
+3: Slightly disagree  
+4: Slightly agree  
+5: Agree  
+6: Strongly agree
+
+Based on my personal bias, I would expect the questions that would be most likley to be positively associated with STEM selection are:  
+
+AGREE_01: _I have a strong sense of belonging to a community of scientists_  
+AGREE_02: _I think of myself as a scientist_  
+AGREE_03: _I feel like I belong in the field of science_   
+AGREE_08: _Making a theoretical contribution to science is important to me_   
+
+
+
+```{r comparing STEM vs Rest AGREE, fig.height = 2, fig.width = 12, fig.align = "center"}
+plotDEMO(AGREE_01, "AGREE_01") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_02, "AGREE_02") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_03, "AGREE_03") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_04, "AGREE_04") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_05, "AGREE_05") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_06, "AGREE_06") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_07, "AGREE_07") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_08, "AGREE_08") + xlab("Score") + theme(legend.position = "none")
+plotDEMO(AGREE_09, "AGREE_09") + xlab("Score") + theme(legend.position = "none")
+
 
 ```
 
-## Determine if Missingness Matters
-From the missingness review. It looks like only a how far a student is from home and their HS GPA has NA's 
-
-Is it possible that a certain subset of students chose not to respond with their HS GPA?
+## Missingness Notes
+Based on the descriptive statistics review of the variables, the missing data for "DISTANCE" and "HS_GPA"   
 
 
 
@@ -477,15 +510,36 @@ Is it possible that a certain subset of students chose not to respond with their
 
 # Model {.tabset .tabset-pills}
 ## Develop Model for Major
-Will probably start with logistic regression and then potentially move on to a more complicated model.  
+The goal of the model is to be able to predict a binary outcome that is categorical (is the student likely to choose STEM or not as their major). These types of models are generally called "classification models" and two commonly used ones are Logistic regessions and random forests.
 
 
-Largely looking for a classification for determining the __MAJOR__ based on the survey results.
+### LOGISTIC REGRESSION
+In this algorithm, the probabilities describing the possible outcomes of a single trial are modelled using a logistic function.
+		this is a sub model of "glm" which like linear regression aims to find the line which reduces residuals
 
-What models were chosen?
+Advantages: Logistic regression is designed for classification, and is most useful for understanding the influence of several independent variables on a single outcome variable.
+
+Disadvantages: Works only when the predicted variable is binary, assumes all predictors are independent of each other, and assumes data is free of missing values.
+
+### RANDOM FOREST
+Random forest classifier fits a number of decision trees on various sub-samples of datasets and uses average to improve the predictive accuracy of the model and control over-fitting.
+
+Advantages: Reduction in over-fitting and random forest classifier is more accurate than decision trees in most cases.
+
+Disadvantages: Slow real time prediction, difficult to implement, and complex algorithm.
 
 
-What are these types of models?
+### Model Overview
+
+<u>Training and Test data</u>
+
+Splitting data into training and test datasets
+	
+<u>Model Performance</u>
+
+*  Accuracy: (True Positive + True Negative) / Total Population  
+*  Precision: "how sensitive models are to False Positives" (i.e. predicting a student will not choose STEM is leaving when he-she actually chooses STEM)  
+*  Recall: "how sensitive models are to False Negatives" (i.e. predicting that a student will choose STEM he-she will not choose STEM).
 
 
 ```{r model prep}
@@ -494,9 +548,9 @@ WFU_model <- WFU_stu %>%
   # mutate(STEM = case_when(MAJOR == 6 ~"YES", TRUE ~ "NO")) %>% 
   # select(-MAJOR, -STUID, -YEAR, -DISTANCE, -HS_GPA) %>% 
   select(STEM, GENDER, RACEgroup, COLLEGE_GPA, FIRST_GEN, 
-         ACT09, ACT12, ACT13, 
-         RATE5, RATE7, 
-         AGREE_01, AGREE_02, AGREE_03, AGREE_08, AGREE_06
+         ACT02, ACT08, ACT09, ACT12, ACT13, 
+         RATE3, RATE5, RATE7, 
+         AGREE_01, AGREE_02, AGREE_03, AGREE_08, AGREE_06, AGREE_07
          ) %>%
   mutate(GENDER = as_factor(GENDER),
          STEM = as_factor(STEM))
@@ -506,26 +560,25 @@ WFU_model <- WFU_stu %>%
 train_test_split <-
   rsample::initial_split(
     data = WFU_model,     
-    prop = 0.80   
+    prop = 0.75   
   ) 
 
 # train_test_split
 
 train_tbl <- train_test_split %>% training() 
 test_tbl  <- train_test_split %>% testing()
-```
-
-## Logistic Regression  
-
-
-```{r build Logistic}
-
 
 recipe_prepped <- recipe_simple(dataset = train_tbl)
 
 train_baked <- bake(recipe_prepped, new_data = train_tbl)
 test_baked  <- bake(recipe_prepped, new_data = test_tbl)
 
+```
+
+## Logistic Regression  
+
+
+```{r build Logistic}
 
 # logGLM <- glm(STEM ~  ., data=train_baked, family="binomial")
 
@@ -566,21 +619,27 @@ tibble(
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
 
-predictions_glm %>% arrange(.pred_class) %>%  mutate(ord = row_number()) %>% 
-  ggplot(aes(x=ord, y=.pred_class))+
+predictions_glm %>% 
+  mutate(Prediction = ifelse(.pred_class == "YES-STEM", 1, 0)) %>% 
+  arrange(Prediction) %>%  
+  mutate(ord = row_number()) %>% 
+  ggplot(aes(x=ord, y=Prediction))+
     geom_point(aes(color=STEM), size =2, alpha = .5)+
-    geom_smooth(method="glm")+
     ylab("Predicted STEM")+
     xlab("")+
+    scale_y_continuous(breaks=seq(0, 1, by=1)) + 
+    expand_limits(y=c(0,1)) + 
     theme_bw()+
-    viridis::scale_color_viridis(discrete=TRUE)
+    viridis::scale_color_viridis(discrete=TRUE)+
+    ggtitle("Logistic Regression Plot [Prediction vs Actual for Test data]")
   
 
 ```
 
+### Odds Ratio 
 utilizing odds ratio to interpret the elements of the logisitic model 
 
-```{r log odds ratio}
+```{r log odds ratio, fig.height = 10, fig.width = 12, fig.align = "center"}
 
 
 tidy(logistic_glm) %>% 
@@ -588,7 +647,7 @@ tidy(logistic_glm) %>%
          LogOdds = exp(estimate)) %>% 
   arrange(desc(abs(LogOdds))) %>% 
     round_df(3) %>% 
-  ggplot(aes(x=fct_reorder(term, desc(estimate)), y=estimate))+
+  ggplot(aes(x=fct_reorder(term, (estimate)), y=estimate))+
     geom_point(aes(color=pval))+
     geom_segment(aes(x = term, y = 0, xend = term, yend = estimate), color = "grey50") +
     geom_hline(yintercept = 0)+
@@ -600,18 +659,19 @@ tidy(logistic_glm) %>%
     
 
 
-glm_tbl <- tidy(logistic_glm) %>% 
+
+tidy(logistic_glm) %>% 
   mutate(pval = case_when(p.value < 0.05 ~ "<0.05", TRUE ~ ">0.05"),
          Odds = exp(estimate)) %>% 
+  filter(pval == "<0.05") %>%
+  round_df(2) %>% 
   rename(LogOdds = estimate) %>%
   arrange(desc(abs(Odds))) %>% 
-    round_df(2) %>% 
   kable(align='c') %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
 # the odds of getting into an honors class for females (female = 1)over the odds of getting into an honors class for males (female = 0) is exp(.979948) = 2.66. 
 
-# the odds of 
 
 ```
 
@@ -668,28 +728,28 @@ predictions_rf %>%
   kable_styling(bootstrap_options = c("striped", "hover", "condensed", full_width = F))
 
 
-# impt_frame <- measure_importance(rf_build$fit)
-# 
-# plot_multi_way_importance(impt_frame, no_of_labels = 10)
-# plot_multi_way_importance(impt_frame, x_measure = "accuracy_decrease", y_measure = "gini_decrease", size_measure = "p_value", no_of_labels = 10)
-# 
-# 
-# #variable depth
-# md_frame <- min_depth_distribution(rf_build$fit)
-# 
-# plot_min_depth_distribution(md_frame, mean_sample = "top_trees") # default mean_sample arg 
+impt_frame <- measure_importance(rf_build$fit)
+
+plot_multi_way_importance(impt_frame, no_of_labels = 10)
+plot_multi_way_importance(impt_frame, x_measure = "accuracy_decrease", y_measure = "gini_decrease", size_measure = "p_value", no_of_labels = 10)
+
+
+#variable depth
+md_frame <- min_depth_distribution(rf_build$fit)
+
+plot_min_depth_distribution(md_frame, mean_sample = "top_trees") # default mean_sample arg
 
 
 ```
 
 
 
-## Confuson Matrices
-The confusion matrix allows us to show based on the test data how often we are correctly predicting each category.  
+## Confusion Matrices
+The confusion matrix allows us to show (based on the test data) how often we are correctly predicting each category.  
 
 When we compare the logistic regression vs the random forest we see that the __logistic regression__ model performs better than the random forest model. The logistic regession model also had the added benefit of being significantly easier to interpret than the random forest.
 
-```{r confusion matrices}
+```{r confusion matrices, out.width=c('50%', '50%'), fig.show='hold'}
 # Confusion matrix for Logistic
 predictions_glm %>%
   conf_mat(STEM, .pred_class) %>%
@@ -720,31 +780,33 @@ predictions_rf %>%
 
 
 # Takeaways/ Application {.tabset .tabset-pills}
-Our goal was to be able to utilize the survey data to be able to predict if a student will choose to graduate within a STEM major  
-*  Depends on the student's demographic information 
-*  In addition to how the students perceive themselves (as measured via the survey responses)
-
-Looking to
-
-So that are the type of students who are more likely to choose STEM as their major?...
-They are more likely to be __male__, __white__ or __asian__, have a fairly high gpa, believe themselves to be part of a scientific community
 
 
 ## How to use the model
 
+So that are the student characteristics that make them more likely to choose STEM as their major?
 
-## Where to next
-Students who answered ___ are more likley to choose STEM, therefore if you want to increase your STEM you might want to ...
+*  On a demographic standpoint they are more likely to be:  
+    - male
+    - white or asian
+    - have a fairly high college gpa
+*  On a student characteristic standpoint they are more likely to:  
+    - believe themselves to be part of a scientific community
 
-There also seems to be a demographic 
 
-Has the amount of STEM majors been changing over time?
+<u>If we want to optimize the current model</u>
+*  Did not investigate the characterize the students who were admitted but did not enroll, which could be an opportunity to quickly increase the STEM enrollment
 
 
-Seeing that "College GPA" has a fairly large impact in the model, a next step in this investigation would be to see if the types of classes that students took impacted their GPA.
+
+<u>If we want to correct for reasons why predictive elements</u>
+
+
+
+<u>Research Items</u>
+*  Seeing that "College GPA" has a fairly large impact in the model, a next step in this investigation would be to see if the types of classes that students took impacted their GPA.
 
 ## Limitations
-*  Did not investigate the characterize the students who were admitted but did not enroll, which could be an opportunity to quickly increase the STEM enrollment
 *  Did not review the students who changed their major later in their academic career, which could be used a test cases for how to transition the current population into STEM
 *  Data doesn't show which students graduate within STEM. THis would help to understand if the support structure could be improved for those majors.
 *  Assuming that the count of students from the fact book are representative of students from the survery (start of year vs 2nd semester)
